@@ -1,0 +1,9 @@
+trigger: none
+
+pool:
+  name: Default 
+
+steps:
+- powershell: |
+    Write-Host "Hello this is just to test the agent"
+  displayName: 'Run simple PowerShell script'
