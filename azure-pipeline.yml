@@ -1,0 +1,48 @@
+trigger: none
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+parameters:
+  - name: userEmail
+    type: string
+    default: ''
+    displayName: 'User Email to Add'
+  - name: accountLicenseType
+    type: string
+    default: 'stakeholder'
+    displayName: 'Account License Type (e.g., express, stakeholder, basic)'
+
+variables:
+  ADO_ORG: 'tejaraghumandala0'
+
+steps:
+- script: |
+    echo "Adding user '${{ parameters.userEmail }}' with license '${{ parameters.accountLicenseType }}' to Azure DevOps org '${ADO_ORG}'..."
+
+    AUTH=$(echo -n ":${ADO_PAT}" | base64)
+
+    response=$(curl -s -w "%{http_code}" -o response.json -X POST \
+      -H "Content-Type: application/json" \
+      -H "Authorization: Basic $AUTH" \
+      -d '{
+            "accessLevel": {
+              "accountLicenseType": "'"${{ parameters.accountLicenseType }}"'"
+            },
+            "user": {
+              "principalName": "'"${{ parameters.userEmail }}"'"
+            }
+          }' \
+      "https://vsaex.dev.azure.com/${ADO_ORG}/_apis/UserEntitlements?api-version=7.1-preview.1")
+
+    if [[ "$response" == "200" || "$response" == "201" ]]; then
+      echo " User added successfully."
+      cat response.json
+    else
+      echo " Failed to add user. HTTP status: $response"
+      cat response.json
+      exit 1
+    fi
+  displayName: 'Add User to Azure DevOps Org'
+  env:
+    ADO_PAT: $(ADO_PAT)
