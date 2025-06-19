@@ -1,0 +1,54 @@
+trigger: none
+
+pool:
+  name: Default
+
+parameters:
+  - name: userEmail
+    type: string
+    default: ''
+  - name: accountLicenseType
+    type: string
+    default: 'stakeholder'
+
+variables:
+  ADO_ORG: 'tejaraghumandala0'
+
+steps:
+- powershell: |
+    if (-not "${{ parameters.userEmail }}") {
+      Write-Error "User email is required."
+      exit 1
+    }
+
+    $auth = [Convert]::ToBase64String([Text.Encoding]::ASCII.GetBytes(":$(ADO_PAT)"))
+
+    $body = @{
+      accessLevel = @{
+        accountLicenseType = "${{ parameters.accountLicenseType }}"
+      }
+      user = @{
+        principalName = "${{ parameters.userEmail }}"
+        subjectKind = "user"
+      }
+    } | ConvertTo-Json -Depth 3
+
+    Write-Host "Request body:"
+    Write-Output $body
+
+    try {
+      $response = Invoke-RestMethod -Uri "https://vsaex.dev.azure.com/$(ADO_ORG)/_apis/userentitlements?api-version=7.1-preview.1" `
+                                   -Method Post `
+                                   -Headers @{ Authorization = "Basic $auth"; "Content-Type" = "application/json" } `
+                                   -Body $body
+      Write-Host "User added successfully."
+      Write-Output $response | ConvertTo-Json -Depth 5
+    }
+    catch {
+      Write-Error "Failed to add user: $($_.Exception.Message)"
+      if ($_.ErrorDetails) {
+        Write-Error $_.ErrorDetails.Message
+      }
+      exit 1
+    }
+  displayName: 'Add user to Azure DevOps organization'
