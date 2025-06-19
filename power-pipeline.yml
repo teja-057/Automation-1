@@ -12,15 +12,23 @@ parameters:
     default: 'stakeholder'
 
 variables:
-  ADO_ORG: 'tejaraghumandala0'
+  ADO_ORG: 'tejaraghumandala0'  
 
 steps:
 - powershell: |
     $auth = [Convert]::ToBase64String([Text.Encoding]::ASCII.GetBytes(":$env:ADO_PAT"))
+
     $body = @{
-      accessLevel = @{ accountLicenseType = '${{ parameters.accountLicenseType }}' }
-      user = @{ principalName = '${{ parameters.userEmail }}' }
+      accessLevel = @{
+        accountLicenseType = "$env:ACCOUNT_LICENSE_TYPE"
+      }
+      user = @{
+        principalName = "$env:USER_EMAIL"
+      }
     } | ConvertTo-Json -Depth 3
+
+    Write-Host "Request body:"
+    Write-Output $body
 
     try {
       $response = Invoke-RestMethod -Uri "https://vsaex.dev.azure.com/$env:ADO_ORG/_apis/UserEntitlements?api-version=7.1-preview.1" `
@@ -32,7 +40,12 @@ steps:
     }
     catch {
       Write-Error "Failed to add user: $($_.Exception.Message)"
+      if ($_.ErrorDetails) {
+        Write-Error $_.ErrorDetails.Message
+      }
       exit 1
     }
   env:
     ADO_PAT: $(ADO_PAT)
+    USER_EMAIL: ${{ parameters.userEmail }}
+    ACCOUNT_LICENSE_TYPE: ${{ parameters.accountLicenseType }}
