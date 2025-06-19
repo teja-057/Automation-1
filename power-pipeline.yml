@@ -1,7 +1,7 @@
 trigger: none
 
 pool:
-  name: Default  
+  name: Default
 
 parameters:
   - name: userEmail
@@ -12,18 +12,24 @@ parameters:
     default: 'stakeholder'
 
 variables:
-  ADO_ORG: 'tejaraghumandala0'  
+  ADO_ORG: 'tejaraghumandala0'
 
 steps:
 - powershell: |
-    $auth = [Convert]::ToBase64String([Text.Encoding]::ASCII.GetBytes(":$env:ADO_PAT"))
+    if (-not "${{ parameters.userEmail }}") {
+      Write-Error "User email is required."
+      exit 1
+    }
+
+    $auth = [Convert]::ToBase64String([Text.Encoding]::ASCII.GetBytes(":$(ADO_PAT)"))
 
     $body = @{
       accessLevel = @{
-        accountLicenseType = "$env:ACCOUNT_LICENSE_TYPE"
+        accountLicenseType = "${{ parameters.accountLicenseType }}"
       }
       user = @{
-        PrincipalName = "$env:USER_EMAIL"
+        principalName = "${{ parameters.userEmail }}"
+        subjectKind = "user"
       }
     } | ConvertTo-Json -Depth 3
 
@@ -31,7 +37,7 @@ steps:
     Write-Output $body
 
     try {
-      $response = Invoke-RestMethod -Uri "https://vsaex.dev.azure.com/$env:ADO_ORG/_apis/UserEntitlements?api-version=7.1-preview.1" `
+      $response = Invoke-RestMethod -Uri "https://vsaex.dev.azure.com/$(ADO_ORG)/_apis/userentitlements?api-version=7.1-preview.1" `
                                    -Method Post `
                                    -Headers @{ Authorization = "Basic $auth"; "Content-Type" = "application/json" } `
                                    -Body $body
@@ -45,7 +51,4 @@ steps:
       }
       exit 1
     }
-  env:
-    ADO_PAT: $(ADO_PAT)
-    USER_EMAIL: ${{ parameters.userEmail }}
-    ACCOUNT_LICENSE_TYPE: ${{ parameters.accountLicenseType }}
+  displayName: 'Add user to Azure DevOps organization'
