@@ -23,7 +23,7 @@ steps:
         accountLicenseType = "$env:ACCOUNT_LICENSE_TYPE"
       }
       user = @{
-        principalName = "$env:USER_EMAIL"
+        PrincipalName = "$env:USER_EMAIL"
       }
     } | ConvertTo-Json -Depth 3
 
