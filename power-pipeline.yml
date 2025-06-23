@@ -38,12 +38,19 @@ steps:
                                                -Method Get `
                                                -Headers $headers
     Write-Output $existingUsersResponse | ConvertTo-Json -Depth 5
-    # $userEmail = "${{ parameters.userEmail }}"
-    # $userExists = $false
-
-    # foreach ($user in $existingUsersResponse.members) {
+    $userEmail = "${{ parameters.userEmail }}"
+    $userExists = $false
+    foreach ($user in $existingUsersResponse.value) {
+      if ($user.user.principalName -eq $userEmail) {
+         $userExists = $true
+         Write-Output "user exist"
+         break
+         }
+    }
+    # foreach ($user in $existingUsersResponse.) {
     #   if ($user.user.principalName -eq $userEmail) {
     #     $userExists = $true
+    #     Write-Output "user exist"
     #     break
     #   }
     # }
