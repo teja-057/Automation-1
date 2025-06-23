@@ -1,7 +1,7 @@
 trigger: none
 
 pool:
-  name: Default
+  vmImage: 'ubuntu-latest'
 
 parameters:
   - name: userEmail
@@ -9,7 +9,13 @@ parameters:
     default: ''
   - name: accountLicenseType
     type: string
-    default: 'stakeholder'
+    default: 'express' #basic as default
+    values:
+      - stakeholder
+      - express
+      - advanced
+      - professional
+      - enterprise 
 
 variables:
   ADO_ORG: 'tejaraghumandala0'
@@ -22,33 +28,56 @@ steps:
     }
 
     $auth = [Convert]::ToBase64String([Text.Encoding]::ASCII.GetBytes(":$(ADO_PAT)"))
-
-    $body = @{
-      accessLevel = @{
-        accountLicenseType = "${{ parameters.accountLicenseType }}"
-      }
-      user = @{
-        principalName = "${{ parameters.userEmail }}"
-        subjectKind = "user"
-      }
-    } | ConvertTo-Json -Depth 3
-
-    Write-Host "Request body:"
-    Write-Output $body
-
-    try {
-      $response = Invoke-RestMethod -Uri "https://vsaex.dev.azure.com/$(ADO_ORG)/_apis/userentitlements?api-version=7.1-preview.1" `
-                                   -Method Post `
-                                   -Headers @{ Authorization = "Basic $auth"; "Content-Type" = "application/json" } `
-                                   -Body $body
-      Write-Host "User added successfully."
-      Write-Output $response | ConvertTo-Json -Depth 5
+    $headers = @{
+      Authorization = "Basic $auth"
+      "Content-Type" = "application/json"
     }
-    catch {
-      Write-Error "Failed to add user: $($_.Exception.Message)"
-      if ($_.ErrorDetails) {
-        Write-Error $_.ErrorDetails.Message
+
+    # Step 1: Check if the user already exists
+    $existingUsersResponse = Invoke-RestMethod -Uri "https://vsaex.dev.azure.com/$(ADO_ORG)/_apis/userentitlements?api-version=7.1-preview.1" `
+                                               -Method Get `
+                                               -Headers $headers
+
+    $userEmail = "${{ parameters.userEmail }}"
+    $userExists = $false
+
+    foreach ($user in $existingUsersResponse.members) {
+      if ($user.user.principalName -eq $userEmail) {
+        $userExists = $true
+        break
       }
-      exit 1
+    }
+
+    if ($userExists) {
+      Write-Host "User '$userEmail' already exists in the organization. Skipping addition."
+    } else {
+      # Step 2: Proceed to add the user
+      $body = @{
+        accessLevel = @{
+          accountLicenseType = "${{ parameters.accountLicenseType }}"
+        }
+        user = @{
+          principalName = $userEmail
+          subjectKind = "user"
+        }
+      } | ConvertTo-Json -Depth 3
+
+      Write-Host "Adding user '$userEmail' to the organization..."
+
+      try {
+        $addResponse = Invoke-RestMethod -Uri "https://vsaex.dev.azure.com/$(ADO_ORG)/_apis/userentitlements?api-version=7.1-preview.1" `
+                                         -Method Post `
+                                         -Headers $headers `
+                                         -Body $body
+        Write-Host "User added successfully."
+        Write-Output $addResponse | ConvertTo-Json -Depth 5
+      }
+      catch {
+        Write-Error "Failed to add user: $($_.Exception.Message)"
+        if ($_.ErrorDetails) {
+          Write-Error $_.ErrorDetails.Message
+        }
+        exit 1
+      }
     }
   displayName: 'Add user to Azure DevOps organization'
