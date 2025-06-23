@@ -37,54 +37,43 @@ steps:
     $existingUsersResponse = Invoke-RestMethod -Uri "https://vsaex.dev.azure.com/$(ADO_ORG)/_apis/userentitlements?api-version=7.1-preview.1" `
                                                -Method Get `
                                                -Headers $headers
-    Write-Output $existingUsersResponse | ConvertTo-Json -Depth 5
     $userEmail = "${{ parameters.userEmail }}"
     $userExists = $false
     foreach ($user in $existingUsersResponse.value) {
       if ($user.user.principalName -eq $userEmail) {
          $userExists = $true
-         Write-Output "user exist"
          break
          }
     }
-    # foreach ($user in $existingUsersResponse.) {
-    #   if ($user.user.principalName -eq $userEmail) {
-    #     $userExists = $true
-    #     Write-Output "user exist"
-    #     break
-    #   }
-    # }
+    if ($userExists) {
+      Write-Host "User '$userEmail' already exists in the organization. Skipping addition."
+    } else {
+      # Step 2: Proceed to add the user
+      $body = @{
+        accessLevel = @{
+          accountLicenseType = "${{ parameters.accountLicenseType }}"
+        }
+        user = @{
+          principalName = $userEmail
+          subjectKind = "user"
+        }
+      } | ConvertTo-Json -Depth 3
 
-    # if ($userExists) {
-    #   Write-Host "User '$userEmail' already exists in the organization. Skipping addition."
-    # } else {
-    #   # Step 2: Proceed to add the user
-    #   $body = @{
-    #     accessLevel = @{
-    #       accountLicenseType = "${{ parameters.accountLicenseType }}"
-    #     }
-    #     user = @{
-    #       principalName = $userEmail
-    #       subjectKind = "user"
-    #     }
-    #   } | ConvertTo-Json -Depth 3
+      Write-Host "Adding user '$userEmail' to the organization..."
 
-    #   Write-Host "Adding user '$userEmail' to the organization..."
-
-    #   try {
-    #     $addResponse = Invoke-RestMethod -Uri "https://vsaex.dev.azure.com/$(ADO_ORG)/_apis/userentitlements?api-version=7.1-preview.1" `
-    #                                      -Method Post `
-    #                                      -Headers $headers `
-    #                                      -Body $body
-    #     Write-Host "User added successfully."
-    #     Write-Output $addResponse | ConvertTo-Json -Depth 5
-    #   }
-    #   catch {
-    #     Write-Error "Failed to add user: $($_.Exception.Message)"
-    #     if ($_.ErrorDetails) {
-    #       Write-Error $_.ErrorDetails.Message
-    #     }
-    #     exit 1
-    #   }
-    # }
+      try {
+        $addResponse = Invoke-RestMethod -Uri "https://vsaex.dev.azure.com/$(ADO_ORG)/_apis/userentitlements?api-version=7.1-preview.1" `
+                                         -Method Post `
+                                         -Headers $headers `
+                                         -Body $body
+        Write-Output $addResponse | ConvertTo-Json -Depth 5
+      }
+      catch {
+        Write-Error "Failed to add user: $($_.Exception.Message)"
+        if ($_.ErrorDetails) {
+          Write-Error $_.ErrorDetails.Message
+        }
+        exit 1
+      }
+    }
   displayName: 'Add user to Azure DevOps organization'
