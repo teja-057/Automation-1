@@ -2,8 +2,11 @@ trigger: none
 
 pool:
   name: Default 
+variables: 
+- group: myvargroup
 
 steps:
 - powershell: |
     Write-Host "Hello this is just to test the agent"
+    write-Host "my variable is $env:test-name"
   displayName: 'Run simple PowerShell script'
