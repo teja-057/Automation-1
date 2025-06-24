@@ -1,0 +1,51 @@
+trigger: none
+
+pool:
+  name: Default
+
+parameters:
+  - name: userEmail
+    type: string
+    default: ''
+  
+variables:
+  ADO_ORG: 'tejaraghumandala0'
+
+steps:
+- powershell: |
+    if (-not "${{ parameters.userEmail }}") {
+      Write-Error "User email is required."
+      exit 1
+    }
+    $auth = [Convert]::ToBase64String([Text.Encoding]::ASCII.GetBytes(":$(ADO_PAT)"))
+    $headers = @{ Authorization = "Basic $auth" }
+
+    $organization = "$(ADO_ORG)"
+    $email = "${{ parameters.userEmail }}"
+
+    $graphUrl = "https://vssps.dev.azure.com/$organization/_apis/graph/users?filterValue=$email&api-version=7.1-preview.1"
+
+    try {
+      $response = Invoke-RestMethod -Uri $graphUrl -Headers $headers -Method Get
+    } catch {
+      Write-Error "Failed to query Graph API: $_"
+      exit 1
+    }
+
+    if ($response.count -eq 0) {
+      Write-Error "No user found with email '$email'."
+      exit 1
+    }
+    Write-Host "Below is response object"
+    Write-Host $response
+    $user = $response.value[0]
+    Write-Host "User found:"
+    Write-Host " DisplayName: $($user.displayName)"
+    Write-Host " Email: $($user.principalName)"
+    Write-Host " User GUID (originId): $($user.originId)"
+
+    # Optionally output the GUID to a pipeline variable for later use
+    Write-Host "##vso[task.setvariable variable=userGuid]$($user.originId)"
+  displayName: 'Get Azure DevOps User GUID from Email'
+  env:
+    ADO_PAT: $(ADO_PAT)
