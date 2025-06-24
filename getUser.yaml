@@ -40,16 +40,9 @@ steps:
     $userFound = $false
     foreach ($userEntry in $response.value) {
       if ($userEntry.user.principalName -and $userEntry.user.principalName.ToLower() -eq $emailToCheck.ToLower()) {
-        Write-Output "User found: $($userEntry.user.principalName)"
+        Write-Output "User found: $($userEntry.user.principalName) in the organization"
         $userFound = $true
         break
       }
-    }
-
-    if (-not $userFound) {
-      Write-Error "User with email '$emailToCheck' not found in the organization."
-    }
-    else{
-      Write-Error "User with email '$emailToCheck' found in the organization."
     }
   displayName: 'Check if user exists in Azure DevOps org'
