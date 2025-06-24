@@ -17,35 +17,39 @@ steps:
       Write-Error "User email is required."
       exit 1
     }
+
     $auth = [Convert]::ToBase64String([Text.Encoding]::ASCII.GetBytes(":$(ADO_PAT)"))
     $headers = @{ Authorization = "Basic $auth" }
 
     $organization = "$(ADO_ORG)"
-    $email = "${{ parameters.userEmail }}"
+    $emailToCheck = "${{ parameters.userEmail }}"
+    $top = 1500
+    $skip = 0
 
-    $graphUrl = "https://vssps.dev.azure.com/$organization/_apis/graph/users?filterValue=$email&api-version=7.1-preview.1"
+    $url = "https://vsaex.dev.azure.com/$organization/_apis/userentitlements?api-version=4.1-preview.1&skip=$skip&top=$top"
+
+    Write-Output "Fetching users from Azure DevOps organization '$organization'..."
 
     try {
-      $response = Invoke-RestMethod -Uri $graphUrl -Headers $headers -Method Get
+      $response = Invoke-RestMethod -Uri $url -Headers $headers
     } catch {
-      Write-Error "Failed to query Graph API: $_"
+      Write-Error "Failed to call Azure DevOps API: $_"
       exit 1
     }
 
-    if ($response.count -eq 0) {
-      Write-Error "No user found with email '$email'."
-      exit 1
+    $userFound = $false
+    foreach ($userEntry in $response.value) {
+      if ($userEntry.user.principalName -and $userEntry.user.principalName.ToLower() -eq $emailToCheck.ToLower()) {
+        Write-Output "User found: $($userEntry.user.principalName)"
+        $userFound = $true
+        break
+      }
     }
-    Write-Host "Below is response object"
-    Write-Host $response
-    $user = $response.value[0]
-    Write-Host "User found:"
-    Write-Host " DisplayName: $($user.displayName)"
-    Write-Host " Email: $($user.principalName)"
-    Write-Host " User GUID (originId): $($user.originId)"
 
-    # Optionally output the GUID to a pipeline variable for later use
-    Write-Host "##vso[task.setvariable variable=userGuid]$($user.originId)"
-  displayName: 'Get Azure DevOps User GUID from Email'
-  env:
-    ADO_PAT: $(ADO_PAT)
+    if (-not $userFound) {
+      Write-Error "User with email '$emailToCheck' not found in the organization."
+    }
+    else{
+      Write-Error "User with email '$emailToCheck' found in the organization."
+    }
+  displayName: 'Check if user exists in Azure DevOps org'
