@@ -1,0 +1,81 @@
+trigger: none
+
+pool:
+  name: Default
+
+parameters:
+  - name: userEmail
+    type: string
+    default: ''
+  - name: accountLicenseType
+    type: string
+    default: 'express' #basic as default
+    values:
+      - stakeholder
+      - express
+      - advanced
+      - professional
+      - enterprise 
+
+variables:
+  ADO_ORG: 'tejaraghumandala0'
+
+steps:
+- powershell: |
+    if (-not "${{ parameters.userEmail }}") {
+      Write-Error "User email is required."
+      exit 1
+    }
+
+    $auth = [Convert]::ToBase64String([Text.Encoding]::ASCII.GetBytes(":$(ADO_PAT)"))
+    $headers = @{ Authorization = "Basic $auth"; "Content-Type" = "application/json" }
+
+    $organization = "$(ADO_ORG)"
+    $emailToCheck = "${{ parameters.userEmail }}"
+    $licenseType = "${{ parameters.accountLicenseType }}"
+    $top = 1500
+    $skip = 0
+
+    $url = "https://vsaex.dev.azure.com/$organization/_apis/userentitlements?api-version=4.1-preview.1&skip=$skip&top=$top"
+
+    Write-Output "Fetching users from Azure DevOps organization '$organization'..."
+
+    try {
+      $response = Invoke-RestMethod -Uri $url -Headers $headers
+    } catch {
+      Write-Error "Failed to call Azure DevOps API: $_"
+      exit 1
+    }
+
+    $userFound = $false
+    foreach ($userEntry in $response.value) {
+      if ($userEntry.user.principalName -and $userEntry.user.principalName.ToLower() -eq $emailToCheck.ToLower()) {
+        Write-Output "User found: $($userEntry.user.principalName) in the $organization organization."
+        $userFound = $true
+        break
+      }
+    }
+
+    if (-not $userFound) {
+      Write-Output "User not found. Proceeding to add the user to the organization..."
+
+      $postUrl = "https://vsaex.dev.azure.com/$organization/_apis/userentitlements?api-version=4.1-preview.1"
+      $body = @{
+        accessLevel = @{
+          accountLicenseType = $licenseType
+        }
+        user = @{
+          principalName = $emailToCheck
+          subjectKind = "user"
+        }
+      } | ConvertTo-Json -Depth 10
+
+      try {
+        $createResponse = Invoke-RestMethod -Uri $postUrl -Method Post -Headers $headers -Body $body
+        Write-Output "User '$emailToCheck' successfully added to the organization with license type '$licenseType'."
+      } catch {
+        Write-Error "Failed to add user: $_"
+        exit 1
+      }
+    }
+  displayName: 'Check and Add User to Azure DevOps Org if Missing'
