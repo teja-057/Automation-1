@@ -1,0 +1,54 @@
+trigger: none
+
+pool:
+  name: Default
+
+parameters:
+  - name: userEmail
+    type: string
+    default: ''
+
+variables:
+  ADO_ORG: 'tejaraghumandala0'
+
+steps:
+- powershell: |
+    if (-not "${{ parameters.userEmail }}") {
+      Write-Error "User email is required."
+      exit 1
+    }
+
+    $auth = [Convert]::ToBase64String([Text.Encoding]::ASCII.GetBytes(":$(ADO_PAT)"))
+    $headers = @{ Authorization = "Basic $auth"; "Content-Type" = "application/json" }
+
+    $organization = "$(ADO_ORG)"
+    $emailToCheck = "${{ parameters.userEmail }}"
+
+    Write-Host "Fetching user descriptor for $emailToCheck from organization $organization..."
+
+    $urlGetUser = "https://vssps.dev.azure.com/$organization/_apis/graph/users?filterValue=$emailToCheck&api-version=6.0-preview.1"
+    
+    try {
+      $response = Invoke-RestMethod -Uri $urlGetUser -Headers $headers -Method Get
+
+      if ($response.count -eq 0) {
+        Write-Host "User with email '$emailToCheck' not found in organization '$organization'."
+      }
+
+      $userDescriptor = $response.value[0].descriptor
+      Write-Host "User descriptor found: $userDescriptor"
+
+      # Delete the user from the organization (remove access)
+      $urlDeleteUser = "https://vssps.dev.azure.com/$organization/_apis/graph/users/$userDescriptor?api-version=6.0-preview.1"
+
+      Invoke-RestMethod -Uri $urlDeleteUser -Headers $headers -Method Delete
+      
+      Write-Host "Successfully removed access for user '$emailToCheck' from organization '$organization'."
+    }
+    catch {
+      Write-Error "An error occurred: $_"
+      exit 1
+    }
+  displayName: 'Remove user access from Azure DevOps org'
+  env:
+    ADO_PAT: $(ADO_PAT)
