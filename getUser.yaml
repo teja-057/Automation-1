@@ -46,4 +46,7 @@ steps:
         break
       }
     }
+    if(-not $userFound){
+        Write-Output "User with email $($userEntry.user.principalName) is not found in the organization"
+    }
   displayName: 'Check if user exists in Azure DevOps org'
