@@ -38,6 +38,7 @@ steps:
     }
 
     $userFound = $false
+    Write-Host $response.value
     foreach ($userEntry in $response.value) {
       if ($userEntry.user.principalName -and $userEntry.user.principalName.ToLower() -eq $emailToCheck.ToLower()) {
         Write-Output "User found: $($userEntry.user.principalName) in the organization"
