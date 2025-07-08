@@ -60,7 +60,7 @@ steps:
 
     Write-Output "UserId for deletion: $userId"
 
-    $deleteUrl = "https://vsaex.dev.azure.com/$organization/_apis/userentitlements/$userId?api-version=4.1-preview.1"
+    $deleteUrl = "https://vsaex.dev.azure.com/$($organization)/_apis/userentitlements/$($userId)?api-version=4.1-preview.1"
     Write-Output "DELETE URL: $deleteUrl"  # For debugging
 
     try {
