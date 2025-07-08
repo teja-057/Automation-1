@@ -43,6 +43,7 @@ steps:
       if ($userEntry.user.principalName -and $userEntry.user.principalName.ToLower() -eq $emailToCheck.ToLower()) {
         Write-Output "User found: $($userEntry.user.principalName) in the $organization organization."
         $userId = $userEntry.id
+        Write-Output $userEntry | ConvertTo-Json -Depth 5
         $userFound = $true
         break
       }
