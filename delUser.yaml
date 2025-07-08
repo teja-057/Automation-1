@@ -49,9 +49,18 @@ steps:
     }
     if (-not $userFound){
       Write-Output " User not found in the organization"
+      exit 0
     }
-    else{
-      Write-Output "User found in the organization with id : $userId"
+    Write-Output "UserId for deletion: $userId"
+
+    $deleteUrl = "https://vsaex.dev.azure.com/$organization/_apis/userentitlements/$userId?api-version=4.1-preview.1"
+    
+    try {
+      Invoke-RestMethod -Uri $deleteUrl -Method Delete -Headers $headers
+      Write-Output "Successfully deleted user '$emailToCheck' from organization '$organization'."
+    } catch {
+      Write-Error "Failed to delete user: $_"
+      exit 1
     }
 
   displayName: 'Check if user exist if yes then remove him from organization'
