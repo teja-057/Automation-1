@@ -57,12 +57,9 @@ steps:
       Write-Error "Cannot delete user. UserId is missing."
       exit 1
     }
-
-    Write-Output "UserId for deletion: $userId"
-
+    Write-Output "Proceeding to delete the user...."
     $deleteUrl = "https://vsaex.dev.azure.com/$($organization)/_apis/userentitlements/$($userId)?api-version=4.1-preview.1"
-    Write-Output "DELETE URL: $deleteUrl"  # For debugging
-
+    
     try {
       Invoke-RestMethod -Uri $deleteUrl -Method Delete -Headers $headers
       Write-Output "Successfully deleted user '$emailToCheck' from organization '$organization'."
@@ -70,22 +67,5 @@ steps:
       Write-Error "Failed to delete user: $_"
       exit 1
     }
-
-    
-    # if (-not $userFound){
-    #   Write-Output " User not found in the organization"
-    #   exit 0
-    # }
-    # Write-Output "UserId for deletion: $userId"
-
-    # $deleteUrl = "https://vsaex.dev.azure.com/$organization/_apis/userentitlements/$userId?api-version=4.1-preview.1"
-    
-    # try {
-    #   Invoke-RestMethod -Uri $deleteUrl -Method Delete -Headers $headers
-    #   Write-Output "Successfully deleted user '$emailToCheck' from organization '$organization'."
-    # } catch {
-    #   Write-Error "Failed to delete user: $_"
-    #   exit 1
-    # }
 
   displayName: 'Check if user exist if yes then remove him from organization'
