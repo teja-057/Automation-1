@@ -1,0 +1,60 @@
+trigger: none
+
+pool:
+  name: Default
+
+parameters:
+  - name: userEmail
+    type: string
+    default: ''
+  - name: accountLicenseType
+    type: string
+    default: 'express'
+  - name: projectName
+    type: string
+    default: ''
+
+variables:
+  ADO_ORG: 'tejaraghumandala0'
+
+steps:
+- powershell: |
+    if (-not "${{ parameters.userEmail }}") {
+      Write-Error "User email is required."
+      exit 1
+    }
+
+    if (-not "${{ parameters.projectName }}") {
+      Write-Error "Project name is required."
+      exit 1
+    }
+
+    $org = "$(ADO_ORG)"
+    $projectName = "${{ parameters.projectName }}"
+    $auth = [Convert]::ToBase64String([Text.Encoding]::ASCII.GetBytes(":$(ADO_PAT)"))
+
+    $headers = @{
+      Authorization = "Basic $auth"
+    }
+
+    $uri = "https://dev.azure.com/$org/_apis/projects?api-version=7.1-preview.4"
+
+    Write-Host "Fetching project ID for project: $projectName"
+
+    $response = Invoke-RestMethod -Uri $uri -Headers $headers -Method Get
+
+    $project = $response.value | Where-Object { $_.name -eq $projectName }
+
+    if ($null -eq $project) {
+      Write-Error "Project '$projectName' not found."
+      exit 1
+    }
+
+    $projectId = $project.id
+    Write-Host "Project ID for '$projectName' is: $projectId"
+
+    # Save for later use (optional):
+    #Write-Host "##vso[task.setvariable variable=projectId;isOutput=true]$projectId"
+
+    # You can now continue to use $projectId in your next API call
+  displayName: 'Get Project ID from Name'
