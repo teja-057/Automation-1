@@ -19,7 +19,6 @@ parameters:
 
 variables:
   ADO_ORG: 'tejaraghumandala0'  # Change to your org name
-  ADO_PAT: $(ADO_PAT)           # Set this as a secret variable in pipeline UI
 
 steps:
 - powershell: |
