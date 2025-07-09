@@ -40,7 +40,7 @@ steps:
     $projectName = "${{ parameters.projectName }}"
     $groupType = "${{ parameters.groupType }}"
     $auth = [Convert]::ToBase64String([Text.Encoding]::ASCII.GetBytes(":$(ADO_PAT)"))
-    $headers = @{ Authorization = "Basic $auth" }
+    $headers = @{ Authorization = "Basic $auth" "Content-Type" = "application/json"}
 
     # Step 1: Get Project ID
     $projectListUrl = "https://dev.azure.com/$org/_apis/projects?api-version=7.1-preview.4"
