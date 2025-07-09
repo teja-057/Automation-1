@@ -12,7 +12,7 @@ parameters:
     default: 'express'
   - name: projectName
     type: string
-    default: ''
+    default: 'Automation-1'
 
 variables:
   ADO_ORG: 'tejaraghumandala0'
@@ -42,6 +42,8 @@ steps:
     Write-Host "Fetching project ID for project: $projectName"
 
     $response = Invoke-RestMethod -Uri $uri -Headers $headers -Method Get
+     
+    Write-Output $response | ConvertTo-Json -Depth 5
 
     $project = $response.value | Where-Object { $_.name -eq $projectName }
 
