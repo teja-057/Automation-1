@@ -9,16 +9,21 @@ parameters:
     default: ''
   - name: accountLicenseType
     type: string
-    default: 'express'
+    default: 'stakeholder'  # Options: stakeholder, express
   - name: projectName
     type: string
-    default: 'Automation-1'
+    default: 'Automation-1'             # e.g. "MyProject"
+  - name: groupType
+    type: string
+    default: 'projectReader'  # Options: projectReader, projectContributor, projectAdministrator
 
 variables:
-  ADO_ORG: 'tejaraghumandala0'
+  ADO_ORG: 'tejaraghumandala0'  # Change to your org name
+  ADO_PAT: $(ADO_PAT)           # Set this as a secret variable in pipeline UI
 
 steps:
 - powershell: |
+    # Validate inputs
     if (-not "${{ parameters.userEmail }}") {
       Write-Error "User email is required."
       exit 1
@@ -29,23 +34,20 @@ steps:
       exit 1
     }
 
+    # Setup
     $org = "$(ADO_ORG)"
+    $emailToCheck = "${{ parameters.userEmail }}"
+    $licenseType = "${{ parameters.accountLicenseType }}"
     $projectName = "${{ parameters.projectName }}"
+    $groupType = "${{ parameters.groupType }}"
     $auth = [Convert]::ToBase64String([Text.Encoding]::ASCII.GetBytes(":$(ADO_PAT)"))
+    $headers = @{ Authorization = "Basic $auth" }
 
-    $headers = @{
-      Authorization = "Basic $auth"
-    }
-
-    $uri = "https://dev.azure.com/$org/_apis/projects?api-version=7.1-preview.4"
-
-    Write-Host "Fetching project ID for project: $projectName"
-
-    $response = Invoke-RestMethod -Uri $uri -Headers $headers -Method Get
-     
-    Write-Output $response | ConvertTo-Json -Depth 5
-
-    $project = $response.value | Where-Object { $_.name -eq $projectName }
+    # Step 1: Get Project ID
+    $projectListUrl = "https://dev.azure.com/$org/_apis/projects?api-version=7.1-preview.4"
+    Write-Host "Fetching project ID for '$projectName'..."
+    $projectResponse = Invoke-RestMethod -Uri $projectListUrl -Method Get -Headers $headers
+    $project = $projectResponse.value | Where-Object { $_.name -eq $projectName }
 
     if ($null -eq $project) {
       Write-Error "Project '$projectName' not found."
@@ -53,10 +55,38 @@ steps:
     }
 
     $projectId = $project.id
-    Write-Host "Project ID for '$projectName' is: $projectId"
+    Write-Host "Found Project ID: $projectId"
 
-    # Save for later use (optional):
-    #Write-Host "##vso[task.setvariable variable=projectId;isOutput=true]$projectId"
+    # Step 2: Add user to organization and project
+    $postUrl = "https://vsaex.dev.azure.com/$org/_apis/userentitlements?api-version=7.1-preview.1"
 
-    # You can now continue to use $projectId in your next API call
-  displayName: 'Get Project ID from Name'
+    $body = @{
+      accessLevel = @{
+        accountLicenseType = $licenseType
+        licensingSource   = "account"
+      }
+      user = @{
+        principalName = $emailToCheck
+        subjectKind   = "user"
+      }
+      projectEntitlements = @(
+        @{
+          projectRef = @{
+            id = $projectId
+          }
+          group = @{
+            groupType = $groupType
+          }
+        }
+      )
+    } | ConvertTo-Json -Depth 10
+
+    Write-Host "Adding user to organization and project..."
+    try {
+      $createResponse = Invoke-RestMethod -Uri $postUrl -Method Post -Headers $headers -Body $body
+      Write-Host "User '$emailToCheck' successfully added to '$projectName' with groupType '$groupType' and license '$licenseType'."
+    } catch { 
+        Write-Error "Failed to add user to project: $_"
+        exit 1  
+    }
+  displayName: 'Add User to Azure DevOps Project and Org'
