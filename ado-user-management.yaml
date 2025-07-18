@@ -28,21 +28,21 @@ pool:
   name: Default
 
 steps:
-  - template: templates/add-user-org.yml
-    parameters:
-      userEmail: ${{ parameters.userEmail }}
-      accountLicenseType: ${{ parameters.accountLicenseType }}
-    condition: eq('${{ parameters.action }}', 'addOrgUser')
+  - ${{ if eq(parameters.action, 'addOrgUser') }}:
+    - template: templates/add-user-org.yml
+      parameters:
+        userEmail: ${{ parameters.userEmail }}
+        accountLicenseType: ${{ parameters.accountLicenseType }}
 
-  - template: templates/remove-user-org.yml
-    parameters:
-      userEmail: ${{ parameters.userEmail }}
-    condition: eq('${{ parameters.action }}', 'removeUser')
+  - ${{ if eq(parameters.action, 'removeUser') }}:
+    - template: templates/remove-user-org.yml
+      parameters:
+        userEmail: ${{ parameters.userEmail }}
 
-  - template: templates/add-user-project.yml
-    parameters:
-      userEmail: ${{ parameters.userEmail }}
-      accountLicenseType: ${{ parameters.accountLicenseType }}
-      projectName: ${{ parameters.projectName }}
-      groupType: ${{ parameters.groupType }}
-    condition: eq('${{ parameters.action }}', 'addProjectUser')
+  - ${{ if eq(parameters.action, 'addProjectUser') }}:
+    - template: templates/add-user-project.yml
+      parameters:
+        userEmail: ${{ parameters.userEmail }}
+        accountLicenseType: ${{ parameters.accountLicenseType }}
+        projectName: ${{ parameters.projectName }}
+        groupType: ${{ parameters.groupType }}
