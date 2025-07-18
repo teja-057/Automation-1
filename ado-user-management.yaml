@@ -1,0 +1,48 @@
+trigger: none
+
+parameters:
+  - name: action
+    type: string
+    default: 'addOrgUser'
+    values:
+      - addOrgUser
+      - removeUser
+      - addProjectUser
+  - name: userEmail
+    type: string
+    default: ''
+  - name: accountLicenseType
+    type: string
+    default: 'express'
+  - name: projectName
+    type: string
+    default: ''
+  - name: groupType
+    type: string
+    default: 'projectReader'
+
+variables:
+  ADO_ORG: 'tejaraghumandala0'
+
+pool:
+  name: Default
+
+steps:
+  - template: templates/add-user-org.yml
+    parameters:
+      userEmail: ${{ parameters.userEmail }}
+      accountLicenseType: ${{ parameters.accountLicenseType }}
+    condition: eq('${{ parameters.action }}', 'addOrgUser')
+
+  - template: templates/remove-user-org.yml
+    parameters:
+      userEmail: ${{ parameters.userEmail }}
+    condition: eq('${{ parameters.action }}', 'removeUser')
+
+  - template: templates/add-user-project.yml
+    parameters:
+      userEmail: ${{ parameters.userEmail }}
+      accountLicenseType: ${{ parameters.accountLicenseType }}
+      projectName: ${{ parameters.projectName }}
+      groupType: ${{ parameters.groupType }}
+    condition: eq('${{ parameters.action }}', 'addProjectUser')

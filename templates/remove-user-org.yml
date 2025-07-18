@@ -1,0 +1,61 @@
+parameters:
+  - name: userEmail
+    type: string
+
+steps:
+  - powershell: |
+      if (-not "${{ parameters.userEmail }}") {
+        Write-Error "User email is required."
+        exit 1
+      }
+
+      $auth = [Convert]::ToBase64String([Text.Encoding]::ASCII.GetBytes(":$(ADO_PAT)"))
+      $headers = @{ Authorization = "Basic $auth"; "Content-Type" = "application/json" }
+
+      $organization = "$(ADO_ORG)"
+      $emailToCheck = "${{ parameters.userEmail }}"
+      $top = 1500
+      $skip = 0
+
+      $url = "https://vsaex.dev.azure.com/$organization/_apis/userentitlements?api-version=4.1-preview.1&skip=$skip&top=$top"
+
+      Write-Output "Fetching users from Azure DevOps organization '$organization'..."
+
+      try {
+        $response = Invoke-RestMethod -Uri $url -Headers $headers
+      } catch {
+        Write-Error "Failed to call Azure DevOps API: $_"
+        exit 1
+      }
+
+      $userFound = $false
+      $userId = $null
+      foreach ($userEntry in $response.value) {
+        if ($userEntry.user.principalName -and $userEntry.user.principalName.ToLower() -eq $emailToCheck.ToLower()) {
+          Write-Output "User found: $($userEntry.user.principalName) in the $organization organization."
+          $userId = $userEntry.id
+          $userFound = $true
+          break
+        }
+      }
+      if (-not $userFound) {
+        Write-Output "User '$emailToCheck' not found in the organization."
+        exit 0
+      }
+
+      # Sanity check for userId before proceeding
+      if (-not $userId) {
+        Write-Error "Cannot delete user. UserId is missing."
+        exit 1
+      }
+      Write-Output "Proceeding to delete the user...."
+      $deleteUrl = "https://vsaex.dev.azure.com/$($organization)/_apis/userentitlements/$($userId)?api-version=4.1-preview.1"
+      
+      try {
+        Invoke-RestMethod -Uri $deleteUrl -Method Delete -Headers $headers
+        Write-Output "Successfully deleted user '$emailToCheck' from organization '$organization'."
+      } catch {
+        Write-Error "Failed to delete user: $_"
+        exit 1
+      }
+    displayName: 'Remove User from ADO Org'
