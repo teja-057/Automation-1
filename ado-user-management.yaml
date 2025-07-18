@@ -13,7 +13,7 @@ parameters:
     default: ''
   - name: accountLicenseType
     type: string
-    default: 'express'
+    default: 'stakeholder'
   - name: projectName
     type: string
     default: ''
