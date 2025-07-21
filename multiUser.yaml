@@ -1,0 +1,35 @@
+trigger: none
+
+variables:
+  ADO_ORG: 'tejaraghumandala0'
+  csvPath: './userData.csv'
+
+pool:
+  name: Default
+
+jobs:
+- job: LoadAndDispatch
+  steps:
+
+  # Step 1: Read CSV and convert to JSON
+  - task: PowerShell@2
+    name: ReadCSV
+    displayName: 'Read users.csv and convert to JSON'
+    inputs:
+      targetType: 'inline'
+      script: |
+        $csv = Import-Csv "$(csvPath)"
+        $json = $csv | ConvertTo-Json -Depth 5
+        Write-Host "##vso[task.setvariable variable=userData]$json"
+
+  # Step 2: Loop through each user and call appropriate template
+  - ${{ each user in fromJson(variables['userData']) }}:
+    - ${{ if eq(lower(user.remove), 'yes') }}:
+        - template: templates/remove-user-org.yml
+          parameters:
+            userEmail: ${{ user.email }}
+    - ${{ if ne(lower(user.remove), 'yes') }}:
+        - template: templates/add-user-org.yml
+          parameters:
+            userEmail: ${{ user.email }}
+            accountLicenseType: ${{ user.licenseType }}
