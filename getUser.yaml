@@ -19,7 +19,7 @@ steps:
     }
 
     $auth = [Convert]::ToBase64String([Text.Encoding]::ASCII.GetBytes(":$(ADO_PAT)"))
-    $headers = @{ Authorization = "Basic $auth" }
+    $headers = @{ Authorization = "Basic $auth"; "Content-Type" = "application/json" }
 
     $organization = "$(ADO_ORG)"
     $emailToCheck = "${{ parameters.userEmail }}"
@@ -37,7 +37,7 @@ steps:
       exit 1
     }
 
-    $userFound = $false
+    # $userFound = $false
     $response.value | ConvertTo-Json -Depth 10 | Write-Output
     # foreach ($userEntry in $response.value) {
     #   if ($userEntry.user.principalName -and $userEntry.user.principalName.ToLower() -eq $emailToCheck.ToLower()) {
