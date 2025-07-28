@@ -19,11 +19,11 @@ This Azure DevOps pipeline automates user management for your ADO Organization a
 
 ## Pipeline Workflow
 
-   Main Pipeline (ado-user-management.yaml)
-   ├── action: addOrgUser → runs templates/add-user-org.yaml
-   ├── action: removeUser → runs templates/remove-user-org.yaml
-   └── action: addUserToProject → runs templates/add-user-project.yaml
+## 📄 Main Pipeline (`ado-user-management.yaml`)
 
+- ➤ `action: addOrgUser` → runs `templates/add-user-org.yaml`  
+- ➤ `action: removeUser` → runs `templates/remove-user-org.yaml`  
+- ➤ `action: addUserToProject` → runs `templates/add-user-project.yaml`
 
 Each template contains PowerShell logic interacting with Azure DevOps REST APIs.
 
@@ -58,12 +58,15 @@ Each template contains PowerShell logic interacting with Azure DevOps REST APIs.
 
 > Set `ADO_PAT` as a **secret variable** using the pipeline UI under Variables.
 
-## Template Structure
-   ├── ado-user-management.yaml # Main pipeline
-   └── templates/
-      ├── add-user-org.yaml # Adds or updates user in the organization
-      ├── remove-user-org.yaml # Removes user from the organization
-      └── add-user-project.yaml # Assigns user to a project and group
+## 📁 Template Structure
+
+> ├── ado-user-management.yaml           # Main pipeline  
+> └── templates/  
+> &nbsp;&nbsp;&nbsp;&nbsp;├── add-user-org.yaml              # Adds or updates user in the organization  
+> &nbsp;&nbsp;&nbsp;&nbsp;├── remove-user-org.yaml           # Removes user from the organization  
+> &nbsp;&nbsp;&nbsp;&nbsp;└── add-user-project.yaml          # Assigns user to a project and group  
+
+
 
 Each template uses step-based scripting.
 
